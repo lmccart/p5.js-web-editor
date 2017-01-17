@@ -8,7 +8,13 @@ function Nav(props) {
         <li className="nav__item">
           <a
             className="nav__new"
-            onClick={props.newProject}
+            onClick={() => {
+              if (!props.unsavedChanges) {
+                props.newProject();
+              } else if (props.warnIfUnsavedChanges()) {
+                props.newProject();
+              }
+            }}
           >
             New
           </a>
@@ -34,7 +40,7 @@ function Nav(props) {
           }
         })()}
         {(() => { // eslint-disable-line
-          if (props.project.id) {
+          if (props.project.id && props.user.authenticated) {
             return (
               <li className="nav__item">
                 <a className="nav__clone" onClick={props.cloneProject}>
@@ -138,6 +144,7 @@ function Nav(props) {
           );
         })()}
       </ul>
+      <div className="nav__announce">This is a preview version of the editor, that has not yet been officially released. It is in development, you can report bugs <a href="https://github.com/processing/p5.js-web-editor/issues" target="_blank">here</a>. Please use with caution.</div>
     </nav>
   );
 }

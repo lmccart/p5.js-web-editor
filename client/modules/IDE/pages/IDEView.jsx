@@ -23,6 +23,7 @@ import * as EditorAccessibilityActions from '../actions/editorAccessibility';
 import * as PreferencesActions from '../actions/preferences';
 import * as UserActions from '../../User/actions';
 import * as ToastActions from '../actions/toast';
+import * as ConsoleActions from '../actions/console';
 import { getHTMLFile } from '../reducers/files';
 import SplitPane from 'react-split-pane';
 import Overlay from '../../App/components/Overlay';
@@ -53,7 +54,7 @@ class IDEView extends React.Component {
       }
     }
 
-    this.consoleSize = this.props.ide.consoleIsExpanded ? 180 : 29;
+    this.consoleSize = this.props.ide.consoleIsExpanded ? 150 : 29;
     this.sidebarSize = this.props.ide.sidebarIsExpanded ? 160 : 20;
     this.forceUpdate();
 
@@ -75,7 +76,7 @@ class IDEView extends React.Component {
 
   componentWillUpdate(nextProps) {
     if (this.props.ide.consoleIsExpanded !== nextProps.ide.consoleIsExpanded) {
-      this.consoleSize = nextProps.ide.consoleIsExpanded ? 180 : 29;
+      this.consoleSize = nextProps.ide.consoleIsExpanded ? 150 : 29;
     }
 
     if (this.props.ide.sidebarIsExpanded !== nextProps.ide.sidebarIsExpanded) {
@@ -86,10 +87,6 @@ class IDEView extends React.Component {
       if (nextProps.params.project_id !== nextProps.project.id) {
         this.props.getProject(nextProps.params.project_id);
       }
-    }
-
-    if (!nextProps.params.project_id && this.props.params.project_id) {
-      this.props.resetProject();
     }
 
     if (nextProps.preferences.theme !== this.props.preferences.theme) {
@@ -113,7 +110,7 @@ class IDEView extends React.Component {
       }
     }
 
-    if (this.autosaveInterval && !this.props.project.id) {
+    if (this.autosaveInterval && (!this.props.project.id || !this.isUserOwner())) {
       clearInterval(this.autosaveInterval);
       this.autosaveInterval = null;
     }
@@ -191,6 +188,7 @@ class IDEView extends React.Component {
         return false;
       }
       this.props.setUnsavedChanges(false);
+      return true;
     }
   }
 
@@ -209,6 +207,8 @@ class IDEView extends React.Component {
           stopSketch={this.props.stopSketch}
           showShareModal={this.props.showShareModal}
           openForceAuthentication={this.props.openForceAuthentication}
+          unsavedChanges={this.props.ide.unsavedChanges}
+          warnIfUnsavedChanges={this.warnIfUnsavedChanges}
         />
         <Toolbar
           className="Toolbar"
@@ -322,14 +322,15 @@ class IDEView extends React.Component {
                   isExpanded={this.props.ide.sidebarIsExpanded}
                   expandSidebar={this.props.expandSidebar}
                   collapseSidebar={this.props.collapseSidebar}
+                  isUserOwner={this.isUserOwner()}
                 />
                 <Console
-                  consoleEvent={this.props.ide.consoleEvent}
+                  consoleEvents={this.props.console}
                   isPlaying={this.props.ide.isPlaying}
                   isExpanded={this.props.ide.consoleIsExpanded}
                   expandConsole={this.props.expandConsole}
                   collapseConsole={this.props.collapseConsole}
-                  stopSketch={this.props.stopSketch}
+                  clearConsole={this.props.clearConsole}
                 />
               </SplitPane>
               <div className="preview-frame-holder">
@@ -359,6 +360,8 @@ class IDEView extends React.Component {
                   endSketchRefresh={this.props.endSketchRefresh}
                   stopSketch={this.props.stopSketch}
                   setBlobUrl={this.props.setBlobUrl}
+                  stopSketch={this.props.stopSketch}
+                  expandConsole={this.props.expandConsole}
                 />
               </div>
             </SplitPane>
@@ -587,6 +590,8 @@ IDEView.propTypes = {
   resetProject: PropTypes.func.isRequired,
   closeForceAuthentication: PropTypes.func.isRequired,
   openForceAuthentication: PropTypes.func.isRequired,
+  console: PropTypes.array.isRequired,
+  clearConsole: PropTypes.func.isRequired
 };
 
 function mapStateToProps(state) {
@@ -599,7 +604,8 @@ function mapStateToProps(state) {
     editorAccessibility: state.editorAccessibility,
     user: state.user,
     project: state.project,
-    toast: state.toast
+    toast: state.toast,
+    console: state.console
   };
 }
 
@@ -611,7 +617,8 @@ function mapDispatchToProps(dispatch) {
     IDEActions,
     PreferencesActions,
     UserActions,
-    ToastActions),
+    ToastActions,
+    ConsoleActions),
   dispatch);
 }
 
